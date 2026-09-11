@@ -1,0 +1,82 @@
+# ==============================================================================
+# Python & Virtual Environments
+# ==============================================================================
+venv/
+env/
+.env
+.venv/
+ENV/
+bin/
+lib/
+include/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+parts/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ==============================================================================
+# Model Weights & Large AI Artifacts (HuggingFace, PyTorch, ONNX, etc.)
+# ==============================================================================
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx
+*.engine
+*.h5
+*.ckpt
+*.tflite
+*.weights
+models/
+checkpoints/
+.cache/
+hf_cache/
+
+# ==============================================================================
+# OS Generated & IDE Files
+# ==============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE & Editor Configs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ==============================================================================
+# Project Scratch, Logs & Temporary Files
+# ==============================================================================
+scratch/
+*.log
+*.tmp
+temp/
+outputs/
+batch_outputs/
+.system_generated/
+.agents/
+*.docx
+ORIGINAL_REQUEST.md
+ornek/

@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>VisionOCR Web — Deep Learning OCR Workbench</title>
+  
+  <!-- Fonts: Inter & SF Pro Display -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- Marked.js for High Performance Markdown Rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="dark-theme">
+
+  <!-- ── Main App Shell ── -->
+  <div class="app-container">
+
+    <!-- ── 1. Top Navigation & Action Header ── -->
+    <header class="top-header">
+      <div class="header-left">
+        <div class="brand-badge">
+          <div class="brand-icon">⚡</div>
+          <div class="brand-text">
+            <h1 class="brand-title">VisionOCR <span class="badge-web">Web</span></h1>
+            <p class="brand-subtitle">Yapay Zeka Destekli Belge & Fiş Ayrıştırma</p>
+          </div>
+        </div>
+
+        <!-- Mode Navigation Switcher -->
+        <div class="mode-nav-segmented">
+          <button id="btnModeSingle" class="mode-nav-btn active">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span>Tekil Görsel</span>
+          </button>
+          <button id="btnModeBatch" class="mode-nav-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <span>Toplu Fiş Paneli</span>
+            <span class="mode-pill">BATCH</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <!-- Model Selector Dropdown -->
+        <div class="model-selector-wrapper">
+          <select id="modelSelect" class="custom-select" aria-label="OCR Model Seçimi">
+            <option value="GLM-OCR" selected>GLM-OCR (0.9B ViT Model)</option>
+            <option value="OvisOCR2">OvisOCR2 (0.9B Markdown VLM)</option>
+            <option value="LightOnOCR-2-1B">LightOnOCR-2-1B (Belge & Tablo)</option>
+            <option value="dots.ocr">dots.ocr (Çok Dilli Belge & Düzen)</option>
+            <option value="MMOCR">MMOCR (DBNet Tespit + CRNN)</option>
+            <option value="CRNN">CRNN (Hızlı Karakter Tanıma)</option>
+          </select>
+        </div>
+
+        <!-- Single Mode Buttons -->
+        <div id="singleHeaderActions" class="header-actions-group">
+          <!-- File Input (Hidden) -->
+          <input type="file" id="fileInput" accept="image/png, image/jpeg, image/jpg, image/webp, image/bmp, image/tiff" style="display: none;">
+          
+          <!-- Open Image Button -->
+          <button id="btnSelectImage" class="btn btn-secondary" title="Görsel Seç (⌘+O)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span>Görsel Yükle</span>
+          </button>
+
+          <!-- Run OCR Button (Primary Action) -->
+          <button id="btnRunOcr" class="btn btn-primary" title="OCR Çalıştır (⌘+Enter)">
+            <svg class="icon-bolt" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            <span id="btnRunText">OCR Çalıştır</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <!-- Live Status & Hardware Badge -->
+        <div id="hardwareBadge" class="status-badge" title="Hesaplama Cihazı">
+          <span class="status-dot"></span>
+          <span id="hardwareText">Apple Silicon (MPS)</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── 2A. Single File Workspace: Interactive Canvas & Results Splitter ── -->
+    <main class="workspace-grid" id="singleWorkspace">
+
+      <!-- Left Panel: Interactive Image Canvas -->
+      <section class="canvas-panel" id="canvasPanel">
+        <div class="canvas-viewport" id="canvasViewport">
+          
+          <!-- Dropzone Empty State -->
+          <div class="empty-dropzone" id="emptyDropzone">
+            <div class="dropzone-icon">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+            </div>
+            <h3>Görseli buraya sürükleyip bırakın</h3>
+            <p>veya yukarıdaki <strong>Görsel Yükle</strong> butonuna tıklayın</p>
+            <span class="dropzone-hint">PNG, JPG, WEBP, TIFF desteklenir</span>
+          </div>
+
+          <!-- The Zoomable & Pannable Transform Container -->
+          <div class="canvas-transform-wrapper" id="canvasTransformWrapper" style="display: none;">
+            <img id="sourceImage" alt="Yüklenen Görsel" draggable="false">
+            <svg id="boundingBoxSvg" class="bounding-box-layer"></svg>
+          </div>
+
+          <!-- Floating Glassmorphic Toolbar Overlay -->
+          <div class="floating-toolbar" id="floatingToolbar" style="display: none;">
+            <span class="zoom-indicator" id="zoomIndicator">100%</span>
+            <button class="tool-btn" id="btnZoomIn" title="Yakınlaştır (+)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <button class="tool-btn" id="btnZoomOut" title="Uzaklaştır (-)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <div class="tool-divider"></div>
+            <button class="tool-btn" id="btnFit" title="Ekrana Sığdır (⌘+0)">⤢ Sığdır</button>
+            <button class="tool-btn" id="btnActualSize" title="Orijinal Boyut (1:1)">1:1</button>
+            <button class="tool-btn" id="btnRotate" title="90° Döndür">↷ 90°</button>
+            <button class="tool-btn" id="btnReset" title="Sıfırla">↺</button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Right Panel: Inspection & Results -->
+      <section class="results-panel" id="resultsPanel">
+        
+        <!-- Segmented Tab Navigation -->
+        <div class="tabs-header">
+          <button class="tab-btn active" data-tab="tabMarkdown">
+            <span>📝 Markdown / Tablo</span>
+          </button>
+          <button class="tab-btn" data-tab="tabPlainText">
+            <span>📄 Düz Metin</span>
+          </button>
+          <button class="tab-btn" data-tab="tabJson">
+            <span>⚙️ Ham JSON</span>
+          </button>
+          <button class="tab-btn" data-tab="tabStats">
+            <span>📊 İstatistik</span>
+          </button>
+        </div>
+
+        <!-- Tab Body -->
+        <div class="tabs-content">
+          
+          <!-- Tab 1: Formatted Markdown View -->
+          <div class="tab-pane active" id="tabMarkdown">
+            <div class="output-scroll markdown-body" id="markdownOutput">
+              <div class="empty-result-hint">
+                <span>OCR çalıştırıldığında biçimlendirilmiş metin ve tablolar burada görünecektir.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab 2: Plain Text View -->
+          <div class="tab-pane" id="tabPlainText">
+            <div class="output-scroll">
+              <textarea id="plainTextOutput" class="plain-text-area" readonly placeholder="Düz metin çıktısı..."></textarea>
+            </div>
+          </div>
+
+          <!-- Tab 3: JSON View -->
+          <div class="tab-pane" id="tabJson">
+            <div class="output-scroll">
+              <pre id="jsonOutput" class="json-code-view"><code>{\n  "status": "waiting_input"\n}</code></pre>
+            </div>
+          </div>
+
+          <!-- Tab 4: Performance & Meta -->
+          <div class="tab-pane" id="tabStats">
+            <div class="output-scroll stats-view" id="statsOutput">
+              <div class="stats-grid">
+                <div class="stat-card">
+                  <span class="stat-label">Model</span>
+                  <span class="stat-val" id="statModel">-</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">İşlem Süresi</span>
+                  <span class="stat-val highlight" id="statLatency">-</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">Hesaplama Cihazı</span>
+                  <span class="stat-val green" id="statDevice">-</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">Toplam Kelime</span>
+                  <span class="stat-val" id="statWords">-</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">Toplam Karakter</span>
+                  <span class="stat-val" id="statChars">-</span>
+                </div>
+                <div class="stat-card">
+                  <span class="stat-label">Tespit Edilen Kutu</span>
+                  <span class="stat-val" id="statBoxes">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Bottom Action Export Bar -->
+        <footer class="results-footer">
+          <button id="btnCopyText" class="btn btn-secondary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            <span>Panoya Kopyala</span>
+          </button>
+          
+          <div class="footer-export-group">
+            <button id="btnExportTxt" class="btn btn-ghost" title="Metin Dosyası İndir">💾 .txt</button>
+            <button id="btnExportJson" class="btn btn-ghost" title="JSON Dosyası İndir">💾 .json</button>
+            <button id="btnExportMd" class="btn btn-ghost" title="Markdown Dosyası İndir">💾 .md</button>
+          </div>
+        </footer>
+
+      </section>
+
+    </main>
+
+
+    <!-- ── 2B. Batch Processing Workspace: Multi-Receipt Dashboard ── -->
+    <main class="batch-workspace" id="batchWorkspace" style="display: none;">
+
+      <!-- Left Column: Batch Uploader & Parameters -->
+      <section class="batch-sidebar">
+        
+        <!-- Batch Dropzone -->
+        <div class="batch-dropzone" id="batchDropzone">
+          <div class="batch-dropzone-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><polyline points="12 11 12 17 12 14 15 14 9 14"/></svg>
+          </div>
+          <h4>Çoklu Fiş veya Klasör Bırakın</h4>
+          <p>Klasör veya birden fazla görsel dosyasını buraya sürükleyin</p>
+          
+          <div class="batch-upload-btns">
+            <!-- Hidden inputs -->
+            <input type="file" id="batchFolderInput" webkitdirectory directory multiple style="display: none;">
+            <input type="file" id="batchFilesInput" multiple accept="image/png, image/jpeg, image/jpg, image/webp, image/bmp, image/tiff" style="display: none;">
+            
+            <button id="btnSelectBatchFolder" class="btn btn-secondary btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span>Klasör Seç</span>
+            </button>
+            <button id="btnSelectBatchFiles" class="btn btn-secondary btn-sm">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span>Çoklu Fiş Seç</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Batch Queue Info & Parameters -->
+        <div class="batch-params-card">
+          <div class="batch-param-row">
+            <span class="param-label">Seçilen Dosya:</span>
+            <span class="param-value" id="batchFileCountText">0 dosya seçildi</span>
+          </div>
+
+          <div class="batch-param-row">
+            <span class="param-label">Çıktı Formatı:</span>
+            <select id="batchFormatSelect" class="custom-select custom-select-sm">
+              <option value="all" selected>Tümü (.json + .txt)</option>
+              <option value="json">Yalnızca JSON (.json)</option>
+              <option value="txt">Yalnızca Metin (.txt)</option>
+            </select>
+          </div>
+
+          <!-- Run Batch Button -->
+          <button id="btnRunBatch" class="btn btn-primary btn-block" disabled>
+            <svg class="icon-bolt" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            <span id="btnRunBatchText">⚡ Toplu Taramayı Başlat</span>
+          </button>
+        </div>
+
+        <!-- File List Preview Chips -->
+        <div class="batch-file-chips-container" id="batchFileChips">
+          <div class="empty-chips-hint">Henüz fiş/görsel yüklenmedi</div>
+        </div>
+
+      </section>
+
+      <!-- Right Column: Live Batch Dashboard & Results -->
+      <section class="batch-main-dashboard">
+        
+        <!-- Live Progress Section -->
+        <div class="batch-progress-panel" id="batchProgressPanel">
+          <div class="progress-header">
+            <div class="progress-title-group">
+              <span class="live-pulse-dot" id="progressPulse"></span>
+              <h3 id="batchProgressHeading">Toplu İşleme Hazır</h3>
+            </div>
+            <span class="progress-counter" id="batchProgressCounter">%0 — 0 / 0 Fiş</span>
+          </div>
+
+          <!-- Animated Progress Bar -->
+          <div class="progress-track">
+            <div class="progress-fill" id="batchProgressFill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- 4-Card Real-time Metrics Grid -->
+        <div class="batch-metrics-grid">
+          <div class="batch-metric-card">
+            <span class="metric-label">Toplam Fiş</span>
+            <span class="metric-val" id="batchStatTotal">0</span>
+          </div>
+          <div class="batch-metric-card">
+            <span class="metric-label">Başarılı</span>
+            <span class="metric-val text-green" id="batchStatSuccess">0</span>
+          </div>
+          <div class="batch-metric-card">
+            <span class="metric-label">Hatalı / Bozuk</span>
+            <span class="metric-val text-red" id="batchStatFailed">0</span>
+          </div>
+          <div class="batch-metric-card">
+            <span class="metric-label">Geçen Süre / Ortalama</span>
+            <span class="metric-val text-blue" id="batchStatTime">0.00s</span>
+          </div>
+        </div>
+
+        <!-- Active Item Realtime Preview Card -->
+        <div class="batch-active-item-card" id="batchActiveItemCard" style="display: none;">
+          <div class="active-item-header">
+            <span class="active-item-tag">CANLI İŞLENİYOR</span>
+            <span class="active-item-filename" id="batchActiveFilename">receipt_01.png</span>
+            <span class="active-item-latency" id="batchActiveLatency">0.32s</span>
+          </div>
+          <div class="active-item-preview" id="batchActivePreview">Metin ayrıştırılıyor...</div>
+        </div>
+
+        <!-- Action Export Bar (Shown when batch completed) -->
+        <div class="batch-export-toolbar" id="batchExportToolbar" style="display: none;">
+          <div class="export-toolbar-left">
+            <span class="export-success-icon">✓</span>
+            <span class="export-summary-text" id="batchSummaryText">Toplu tarama başarıyla tamamlandı!</span>
+          </div>
+          <div class="export-toolbar-right">
+            <button id="btnBatchDownloadCsv" class="btn btn-secondary btn-sm" title="summary.csv İndir">
+              📊 summary.csv (Excel)
+            </button>
+            <button id="btnBatchDownloadJson" class="btn btn-secondary btn-sm" title="summary.json İndir">
+              ⚙️ summary.json
+            </button>
+            <button id="btnBatchDownloadZip" class="btn btn-primary btn-sm" title="Tüm Çıktıları ZIP Olarak İndir">
+              📦 Tümünü İndir (.ZIP)
+            </button>
+          </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="batch-table-container">
+          <div class="batch-table-header">
+            <h4>İşlem Sonuç Tablosu</h4>
+            <input type="text" id="batchTableSearch" class="table-search-input" placeholder="Sonuçlarda ara (dosya adı, metin)...">
+          </div>
+          <div class="table-scroll-wrapper">
+            <table class="batch-results-table" id="batchResultsTable">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">#</th>
+                  <th>Dosya Adı</th>
+                  <th style="width: 100px;">Durum</th>
+                  <th style="width: 90px;">Süre</th>
+                  <th style="width: 80px;">Karakter</th>
+                  <th style="width: 80px;">Kelime</th>
+                  <th>Metin Önizleme / Hata Detayı</th>
+                </tr>
+              </thead>
+              <tbody id="batchTableBody">
+                <tr class="empty-row">
+                  <td colspan="7">Toplu işlem başlatıldığında sonuçlar burada listelenecektir.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- ── Sonner-Style Dynamic Toast Notification Container ── -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ── Interactive Logic ── -->
+  <script src="/static/app.js"></script>
+</body>
+</html>
